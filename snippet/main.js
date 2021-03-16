@@ -1,3 +1,6 @@
+/**
+ * GLOBAL VARIABLES
+ */
 const VIDEO_SCREEN = ".__video_screen";
 const PUSH_SIZE = "h3";
 const FONT_COLOR = "white";
@@ -66,7 +69,66 @@ class Bullet {
     }
 }
 
+class PttBaseballHelper {
+    constructor() {
+        this.bulletTextList = [];   // initial to empty array
+        this.bulletList = [];       // list of all existing bullet instances
 
+    }
+
+    async getTestData() {
+        let rawResponse = await fetch('https://ptx.transportdata.tw/MOTC/v2/Tourism/ScenicSpot?$top=3&$format=JSON');
+        let response = await rawResponse.json();
+        console.log(response);
+        for (let push of response)
+            this.bulletTextList.push(push.Name);
+    }
+
+    async createBullets() {
+        console.log(this.bulletTextList);
+        for (let text of this.bulletTextList) {
+            let bullet = new Bullet(text, VIDEO_SCREEN);
+            this.bulletList.push(bullet);
+        }
+    }
+
+    async startBulletScreen() {
+        await this.getTestData();
+        await this.createBullets();
+
+        window.setInterval(() => {
+            for (let bullet of this.bulletList) {
+                if (bullet.getTop() <= 430) {
+                    bullet.setTop(bullet.getTop() + 1.5);
+                } else {
+                    bullet.deleteBullet();
+                }
+            }
+        }, 20);
+    }
+}
+
+const pttBaseballHelper = new PttBaseballHelper();
+pttBaseballHelper.startBulletScreen();
+
+
+/**
+ * -------------SEPARATION-------------
+ */
+
+/**
+ * Global Variable For Ptt Comment Request
+ */
+let bulletList = [];    // List of all existing bullet instances
+let timer = null;       // The timer of long poll
+const postURL = "";     // PTT Baseball Web Post URL
+const dataPollURL = "https://www.ptt.cc/poll/Baseball/M.1615889803.A.3A3.html?cacheKey=2084-348061217&offset=165180&offset-sig=945634653cf6c7f9c6cd84183a6ca21e822a107c";
+const dataLongPollURL = "https://www.ptt.cc/v1/longpoll?id=f72ebae044dec61e9996689dc279beef75a37141";
+let pollURL = dataPollURL;
+
+/**
+ * BELOW FOR OLD DATA FETCH AND BULLET DISPLAY
+ */
 
 const getData = async () => {
     let rawResponse = await fetch('https://ptx.transportdata.tw/MOTC/v2/Tourism/ScenicSpot?$top=3&$format=JSON');
@@ -74,7 +136,6 @@ const getData = async () => {
     return response[2].Name;
 }
 
-let bulletList = [];
 const bulletMainLoop = async () => {
     let bulletText = await getData(); 
     let bullet = new Bullet(bulletText, VIDEO_SCREEN);
@@ -94,8 +155,49 @@ const bulletMainLoop = async () => {
     }, 20);
 }
 
+/**
+ * BELOW FOR PTT COMMENT FETCH
+ */
+
+const requestLongPoll = async () => {
+    try {
+        let rawResponse = await fetch(dataLongPollURL);
+        let jsonResponse = await rawResponse.json();
+        console.log(jsonResponse);
+        // add try...catch... later!
+        await requestPoll(pollURL + '&size=' + jsonResponse.size + '&size-sig=' + jsonResponse.sig);
+    } catch (err) {
+        throw (err);
+    }
+
+}
+
+const requestPoll = async (url) => {
+    try {
+        let rawResponse = await fetch(url);
+        let jsonResponse = await rawResponse.json();
+        // SUCCESS
+        if (jsonResponse.success) {
+            console.log(jsonResponse);
+            await getPushContent(jsonResponse.htmlContent);
+            pollURL = jsonResponse.pollUrl;
+            // scheduleNextPoll
+        }
+    } catch (err) {
+        throw (err);
+    }
+        
+}
+
+const getPushContent = async (htmlContent) => {
+    // parse push content
+    let content = htmlContent;
+    console.log(content);
+}
+
+// requestLongPoll();
+
 // top: 430px時，刪除bullet物件
 
-bulletMainLoop();
 
 
