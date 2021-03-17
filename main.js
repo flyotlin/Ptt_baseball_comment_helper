@@ -6,7 +6,7 @@ const PUSH_SIZE = "h3";
 const FONT_COLOR = "white";
 const FONT_SIZE = 33;
 const TOP = 40;
-const LEFT = 40;
+const LEFT = 0;
 const Z_INDEX = 100000000;
 
 /**
@@ -16,8 +16,10 @@ class Bullet {
     /**
      * @param {string} pushComment - The text of the pushComment
      * @param {string} videoScreen - The class name of the parent node
+     * @param {Number} randomIndex - The index in BulletTextList, used 
+     *                               as a seed to get the randomized top position.
      */
-    constructor(pushComment, videoScreen) {
+    constructor(pushComment, videoScreen, randomIndex = -1) {
         // default bullet style setting
         this.fontColor = FONT_COLOR;
         this.fontSize = FONT_SIZE;
@@ -25,14 +27,36 @@ class Bullet {
         this.left = LEFT;
         this.z_index = Z_INDEX;
 
+        this.randomIndex = randomIndex;
+
         this.bullet = document.createElement(PUSH_SIZE);
         this.bulletText = document.createTextNode(pushComment);
         this.bullet.appendChild(this.bulletText);
         
         this.videoScreen = document.querySelector(videoScreen);
+
+        // randomize top position
+        this.randomizeTop();
+        this.randomizeLeft();
         // set the initial position HERE
         this.setBulletStyle();
         this.videoScreen.appendChild(this.bullet);
+    }
+
+    // from 10 ~ 520
+    randomizeTop() {
+        if (this.randomIndex != -1) {
+            let localTop = ( ( Date.now() + this.randomIndex*100 ) % 1000 ) + 10;
+            this.setTop(localTop);
+        }
+    }
+
+    randomizeLeft() {
+        if (this.randomIndex != -1) {
+            let localLeft = (( ( Date.now() + this.randomIndex*100 ) % 50 ) - 28) * 15;
+            console.log(localLeft);
+            this.setLeft(localLeft);
+        }
     }
 
     /**
@@ -55,6 +79,15 @@ class Bullet {
         return this.top;
     }
 
+    setLeft(left) {
+        this.left = left;
+        this.setBulletStyle();
+    }
+
+    getLeft() {
+        return this.left;
+    }
+
     deleteBullet() {
         this.bullet.parentNode.removeChild(this.bullet);
     }
@@ -73,7 +106,6 @@ class PttBaseballHelper {
     constructor() {
         this.bulletTextList = [];   // initial to empty array
         this.bulletList = [];       // list of all existing bullet instances
-
     }
 
     async getTestData() {
@@ -84,24 +116,46 @@ class PttBaseballHelper {
             this.bulletTextList.push(push.Name);
     }
 
+    // used for development testing
+    setStaticTestData() {
+        // this.bulletTextList = [' 我以為你忘了', ' 今天是11播 但是是MOMO拍球', ' 來了', ' 贏定了', ' 留名', ' 那三重球場的大專聯賽是哪邊拍??', ' 歷史性的開賽', ' 來看洋砲', ' 歷史性的', ' 現在統一主場要多一個ELEVEN播momo拍了的製作方式了?', ' 鏞基呢?', ' 味全回歸首戰 王維中首戰 留名', ' 剛剛列隊沒看到洋砲欸', ' 今天是捷盛哦哦哦哦哦', ' 又有新的吉祥物', ' 畫質有差', ' 簽到一下 回歸首戰', ' 打味全來練兵?', ' 要看誰剛好在三重球場有看到轉播車了....', ' 捷盛 今天可以看11了'];
+        // this.bulletTextList = [' 我以為你忘了', ' 今天是11播 但是是MOMO拍球', ' 來了'];
+        this.bulletTextList = [' 我以為你忘了', ' 今天是11播 但是是MOMO拍球', ' 來了', ' 贏定了', ' 留名', ' 那三重球場的大專聯賽是哪邊拍??', ' 歷史性的開賽', ' 來看洋砲', ' 歷史性的', ' 現在統一主場要多一個ELEVEN播momo拍了的製作方式了?'];
+    }
+
     async createBullets() {
         console.log(this.bulletTextList);
         for (let text of this.bulletTextList) {
-            let bullet = new Bullet(text, VIDEO_SCREEN);
+            let bullet = new Bullet(text, VIDEO_SCREEN, this.bulletTextList.indexOf(text));
             this.bulletList.push(bullet);
         }
     }
 
     async startBulletScreen() {
-        await this.getTestData();
+        // await this.getTestData();
+        this.setStaticTestData();
         await this.createBullets();
 
         window.setInterval(() => {
+            // move from top to bottom
+            // for (let bullet of this.bulletList) {
+            //     if (bullet.getTop() <= 430) {
+            //         bullet.setTop(bullet.getTop() + 1.5);
+            //     } else {
+            //         bullet.deleteBullet();
+            //         // remove the out-of-boundary bullet object from the list
+            //         this.bulletList.splice(this.bulletList.indexOf(bullet), 1);
+            //     }
+            // }
+
+            // move from left to right
             for (let bullet of this.bulletList) {
-                if (bullet.getTop() <= 430) {
-                    bullet.setTop(bullet.getTop() + 1.5);
+                if (bullet.getLeft() <= 1600) {
+                    bullet.setLeft(bullet.getLeft() + 1.5);
                 } else {
                     bullet.deleteBullet();
+                    // remove the out-of-boundary bullet object from the list
+                    this.bulletList.splice(this.bulletList.indexOf(bullet), 1);
                 }
             }
         }, 20);
@@ -143,7 +197,7 @@ const bulletMainLoop = async () => {
 
     // TIMER
     window.setInterval(() => {
-    for (let bullet of bulletList) {
+        for (let bullet of bulletList) {
             if (bullet.getTop() <= 430) {
                 bullet.setTop(bullet.getTop() + 1.5);
             }
